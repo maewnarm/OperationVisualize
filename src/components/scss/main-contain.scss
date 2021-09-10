@@ -1,5 +1,6 @@
 :root {
-    --max-height: 200px;
+    --max-height: 0px;
+    --svg-rotate: rotate(180deg);
 }
 
 .accordian-select-detail {
@@ -11,6 +12,7 @@
     width: 95%;
     margin: 0 auto 10px auto;
     display: flex;
+    justify-content: space-around;
     .select-detail-compo {
         text-align: left;
         width: fit-content;
@@ -51,6 +53,9 @@
     .select-detail-datepicker:last-child {
         margin-right: 0px;
     }
+    .select-detail-ct {
+        max-width: 200px;
+    }
 }
 
 .accordion-header button {
@@ -69,35 +74,47 @@
     overflow: hidden;
     border: 1px solid rgb(184, 184, 184);
     width: 80%;
-    margin: 10px auto 0 auto;
+    margin: 10px auto 10px auto;
     border-radius: 5px;
-    p {
-        margin: 20px 0 5px 0;
-        text-align: center;
-        font-weight: bold;
-        font-size: 25px;
-        font-style: italic;
+    .div-result-oa-btn {
+        position: relative;
+        background-color: rgb(225, 255, 234);
+        p {
+            padding: 8px 0;
+            margin-bottom: 0;
+            text-align: center;
+            font-weight: bold;
+            font-style: italic;
+            font-size: 25px;
+        }
+        svg {
+            position: absolute;
+            top: 16px;
+            right: 15px;
+            font-weight: 100;
+            font-size: 22px;
+            transition: transform 0.35s ease-in-out;
+            transform: var(--svg-rotate);
+        }
+    }
+    .div-result-oa-btn:hover {
+        cursor: pointer;
     }
 }
 
-/*.div-result-oa-btn::after {
-        flex-shrink: 0;
-        width: 1.25rem;
-        height: 1.25rem;
-        margin-left: auto;
-        content: "";
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23212529'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-size: 1.25rem;
-}*/
+.div-result-main {
+    visibility: hidden;
+    max-height: var(--max-height);
+    transition-duration: 0.35s;
+    transition-timing-function: ease-in-out;
+}
 
 .div-result-oa {
-    width: 80%;
-    margin: 0 auto;
+    padding: 0 1%;
+    margin: 0 auto 10px auto;
     display: flex;
-    visibility: hidden;
-    max-height: 0px;
-    transition-duration: 0.5s;
+    overflow-y: hidden;
+    overflow-x: auto;
     .div-chart {
         height: 500px;
         width: 70%;
@@ -114,21 +131,53 @@
                         font-weight: bold;
                         font-size: 18px;
                     }
+                    :first-child {
+                        min-width: 90px;
+                    }
+                    :nth-child(2) {
+                        min-width: 80px;
+                    }
+                    :nth-child(3) {
+                        min-width: 100px;
+                    }
                 }
                 tr:nth-child(2n+1) {
                     background-color: rgb(230, 230, 230);
                 }
-                tr:last-child {
+                tr:nth-last-child(5) {
                     font-weight: bold;
                     color: rgb(68, 71, 255);
                     font-size: 20px;
+                    border-bottom: 1px solid gray;
                 }
+            }
+            .avg-row {
+                border: 1px solid rgb(184, 184, 184);
+                background-color: rgb(255, 239, 233) !important;
+            }
+            .avg-row:last-child {
+                color: rgb(68, 71, 255);
+                font-weight: bold;
+                font-size: 20px;
+                border: 1px solid rgb(184, 184, 184);
+                background-color: rgb(255, 242, 199) !important;
             }
         }
     }
 }
 
-.div-show {
-    visibility: visible;
-    max-height: var(--max-height);
+.div-result-work {
+    display: flex;
+    justify-content: space-around;
+    p {
+        font-size: 25px;
+        background-color: rgb(202, 244, 255);
+        width: 48%;
+        padding: 10px 0;
+        margin-top: 10px;
+        border-radius: 5px;
+    }
+    p:last-child {
+        background-color: rgb(255, 226, 237);
+    }
 }

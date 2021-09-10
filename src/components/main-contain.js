@@ -7,13 +7,17 @@ import {
     ButtonGroup,
     Accordion,
     Table,
-    Spinner
+    Spinner,
+    InputGroup,
+    FormControl
 } from 'react-bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { ResponsiveBar } from '@nivo/bar'
 import moment from 'moment'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronUp } from '@fortawesome/free-solid-svg-icons'
 
 const api = axios.create({
     baseURL: `http://127.0.0.1:8080/`
@@ -41,11 +45,13 @@ class Maincontain extends React.Component {
         st_date: new Date(),
         st_time: new Date(),
         en_time: new Date(),
+        diff_time: moment(0).format("HH:mm"),
         getData_btn_disable: true,
         showSumData: false,
         chartData: [{
             mcname: "",
-            p_ct: 0,
+            p_mt: 0,
+            p_ht: 0,
             p_wt: 0,
             p_ngct: 0,
             p_loss: 0,
@@ -53,16 +59,27 @@ class Maincontain extends React.Component {
         }],
         tableData: {
             total: 0,
-            ct: 0,
+            mt: 0,
+            ht: 0,
             wt: 0,
             ngct: 0,
             loss: 0,
             na: 0
         },
         avgData: {
-            ct: 0,
+            mt: 0,
+            ht: 0,
+            wt: 0,
+            ct: 0
+        },
+        cntData: {
+            mt: 0,
+            ht: 0,
             wt: 0
-        }
+        },
+        ct_target: 0,
+        cnt_target: 0,
+        per_cnt_target: 0,
     }
 
     constructor() {
@@ -125,6 +142,8 @@ class Maincontain extends React.Component {
                     this.setState({
                         [key]: date,
                         detailSQL: { ...this.state.detailSQL, [key]: moment(date).format("HH:mm") }
+                    }, () => {
+                        this.calculateCntPercentTarget()
                     })
                 }}
                 dateFormat="HH:mm"
@@ -146,7 +165,8 @@ class Maincontain extends React.Component {
                 console.log(results.data)
                 var arrChartData = {
                     mcname: sql.mc_name,
-                    p_ct: 0,
+                    p_mt: 0,
+                    p_ht: 0,
                     p_wt: 0,
                     p_ngct: 0,
                     p_loss: 0,
@@ -154,11 +174,13 @@ class Maincontain extends React.Component {
                 }
                 var arrTableData = {}
                 var arrAvgData = {}
+                var arrCntData = {}
                 if (results.data.length > 0) {
                     results.data.forEach(result => {
                         arrChartData = {
                             ...arrChartData,
-                            CT: result.p_ct,
+                            MT: result.p_mt,
+                            HT: result.p_ht,
                             WT: result.p_wt,
                             "NG cycle": result.p_ngct,
                             Loss: result.p_loss,
@@ -168,9 +190,13 @@ class Maincontain extends React.Component {
                             total: [
                                 moment.utc(result.s_total * 1000).format("HH:mm:ss")
                             ],
-                            ct: [
-                                moment.utc(result.s_ct * 1000).format("HH:mm:ss"),
-                                result.p_ct
+                            mt: [
+                                moment.utc(result.s_mt * 1000).format("HH:mm:ss"),
+                                result.p_mt
+                            ],
+                            ht: [
+                                moment.utc(result.s_ht * 1000).format("HH:mm:ss"),
+                                result.p_ht
                             ],
                             wt: [
                                 moment.utc(result.s_wt * 1000).format("HH:mm:ss"),
@@ -190,17 +216,27 @@ class Maincontain extends React.Component {
                             ]
                         }
                         arrAvgData = {
-                            ct: result.avg_ct,
-                            wt: result.avg_wt
+                            mt: result.avg_mt,
+                            ht: result.avg_ht,
+                            wt: result.avg_wt,
+                            ct: result.avg_mt + result.avg_ht + result.avg_wt
+                        }
+                        arrCntData = {
+                            mt: result.cnt_mt,
+                            ht: result.cnt_ht,
+                            wt: result.cnt_wt
                         }
                     })
                     console.log(arrChartData)
                 }
                 this.setState({
-                    showSumData: true,
                     chartData: [arrChartData],
                     tableData: arrTableData,
-                    avgData: arrAvgData
+                    avgData: arrAvgData,
+                    cntData: arrCntData
+                }, () => {
+                    this.calculateCntPercentTarget()
+                    this.toggleShowHideSummary(true)
                 })
             })
             .catch(err => {
@@ -209,25 +245,53 @@ class Maincontain extends React.Component {
             })
     }
 
-    toggleShowHideSummary = () => {
-        
+    calculateCntPercentTarget = () => {
+        var percent = 0
+        const diffTime_s = Math.floor(moment(this.state.en_time).diff(moment(this.state.st_time)) / 1000 / 60)*60
+        const diffTime = moment.utc(diffTime_s * 1000).format("HH:mm")
+        const ctTarget = Number(this.state.ct_target)
+        const cntActual = this.state.cntData.mt
+        var cntTarget = 0
+        if (ctTarget > 0) {
+            cntTarget = Math.floor(diffTime_s / ctTarget)
+        }
+        if (cntTarget > 0) {
+            percent = (cntActual / cntTarget * 100).toFixed(2)
+        }
+        this.setState({
+            diff_time: diffTime,
+            cnt_target: cntTarget,
+            per_cnt_target: percent
+        })
+    }
+
+    toggleShowHideSummary = (flag) => {
+        let chart = document.querySelector('.div-result-main')
+        let chev = document.querySelector('.svg-rotate')
+        let h = document.querySelector('.div-result-main').scrollHeight
+        if (flag) {
+            chart.style.setProperty('visibility', 'visible')
+            chart.style.setProperty('--max-height', h + 'px')
+            chev.style.setProperty('--svg-rotate', 'rotate(0deg)')
+        } else {
+            chart.style.setProperty('visibility', 'hidden')
+            chart.style.setProperty('--max-height', '0')
+            chev.style.setProperty('--svg-rotate', 'rotate(180deg)')
+        }
+        this.setState({
+            showSumData: flag,
+        })
     }
 
     test = () => {
-        let show = document.querySelector('.div-result-oa')
-        let h = document.querySelector('.div-result-oa').scrollHeight
-        console.log(document.querySelector('.div-result-oa'))
-        show.style.setProperty('--max-height', h + 'px')
-        this.setState({
-            showSumData: !this.state.showSumData,
-        })
+        this.calculateCntPercentTarget()
     }
 
     render() {
         return (
             <div className="div-main-contain">
-                <button onClick={() => this.test()}>test1</button>
-                <h1>Summary Operation Ratio</h1>
+                {/*<button onClick={() => this.test()}>test1</button>*/}
+                <h1>Initial Stage Visualize</h1>
                 <Accordion defaultActiveKey="0" className="accordian-select-detail">
                     <Accordion.Item eventKey="0">
                         <Accordion.Header>Operation Record details</Accordion.Header>
@@ -270,100 +334,158 @@ class Maincontain extends React.Component {
                                     <h6>End date :</h6>
                                     {this.TimePicker("en_time")}
                                 </div>
+                                <div className="select-detail-ct">
+                                    <br />
+                                    <InputGroup>
+                                        <InputGroup.Text id="input-ct-target">CT target (s.)</InputGroup.Text>
+                                        <FormControl
+                                            aria-label="Default"
+                                            aria-describedby="inputGroup-sizing-default"
+                                            value={this.state.ct_target}
+                                            onChange={e => this.setState({ ct_target: e.target.value })}
+                                        />
+                                    </InputGroup>
+                                </div>
                             </div>
                             <Button onClick={() => this.getSumdata()} disabled={this.state.getData_btn_disable}>Get data</Button>
                         </Accordion.Body>
                     </Accordion.Item>
                 </Accordion>
                 <div className="div-summary-data">
-                    <div className="div-result-oa-btn">
+                    <div className="div-result-oa-btn" onClick={() => this.toggleShowHideSummary(!this.state.showSumData)}>
                         <p>Summary data</p>
+                        <FontAwesomeIcon icon={faChevronUp} className="svg-rotate" />
                     </div>
-                    <div className={this.state.showSumData ? "div-result-oa div-show" : "div-result-oa"}>
-                        <div className="div-chart">
-                            <ResponsiveBar
-                                {...commonProps}
-                                data={this.state.chartData}
-                                keys={['CT', 'WT', 'NG cycle', 'Loss', 'N/A']}
-                                maxValue={100}
-                                padding={0.2}
-                                layout="vertical"
-                                enableGridY={true}
-                                enableGridX={false}
-                                axisLeft={{
-                                    format: value =>
-                                        `${value}%`
-                                }}
-                                valueFormat={value =>
-                                    `${value}%`
-                                }
-                                legends={[
-                                    {
-                                        dataFrom: 'keys',
-                                        anchor: 'bottom-right',
-                                        direction: 'column',
-                                        justify: false,
-                                        translateX: 120,
-                                        translateY: 0,
-                                        itemsSpacing: 2,
-                                        itemWidth: 100,
-                                        itemHeight: 20,
-                                        itemDirection: 'left-to-right',
-                                        itemOpacity: 0.85,
-                                        symbolSize: 20,
-                                        effects: [
-                                            {
-                                                on: 'hover',
-                                                style: {
-                                                    itemOpacity: 1
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]}
-                            />
+                    <div className="div-result-main">
+                        <div className="div-result-work">
+                            <p>Run time :  <b>{this.state.diff_time}</b></p>
+                            <p>Work amount :  <b>{this.state.cntData.mt} / {this.state.cnt_target} ({this.state.per_cnt_target}%)</b></p>
                         </div>
-                        <div className="div-data">
-                            <Table responsive className="table-sumdata">
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>Time</th>
-                                        <th>Ratio(%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td >CT</td>
-                                        <td >{this.state.tableData.ct[0]}</td>
-                                        <td >{this.state.tableData.ct[1]}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td >WT</td>
-                                        <td >{this.state.tableData.wt[0]}</td>
-                                        <td >{this.state.tableData.wt[1]}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td >NG cycle</td>
-                                        <td >{this.state.tableData.ngct[0]}</td>
-                                        <td >{this.state.tableData.ngct[1]}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td >Loss</td>
-                                        <td >{this.state.tableData.loss[0]}</td>
-                                        <td >{this.state.tableData.loss[1]}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td >N/A</td>
-                                        <td >{this.state.tableData.na[0]}</td>
-                                        <td >{this.state.tableData.na[1]}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Total</td>
-                                        <td>{this.state.tableData.total[0]}</td>
-                                    </tr>
-                                </tbody>
-                            </Table>
+                        <div className="div-result-oa">
+                            <div className="div-chart">
+                                <ResponsiveBar
+                                    {...commonProps}
+                                    data={this.state.chartData}
+                                    keys={['MT', 'HT', 'WT', 'NG cycle', 'Loss', 'N/A']}
+                                    maxValue={100}
+                                    padding={0.2}
+                                    layout="vertical"
+                                    enableGridY={true}
+                                    enableGridX={false}
+                                    axisLeft={{
+                                        format: value =>
+                                            `${value}%`
+                                    }}
+                                    valueFormat={value =>
+                                        `${value}%`
+                                    }
+                                    tooltip={({ id, value, color }) => (
+                                        <div
+                                            style={{
+                                                padding: 12,
+                                                color,
+                                                background: '#222222',
+                                            }}
+                                        >
+                                            <strong>
+                                                {id} : {value}%
+                                            </strong>
+                                        </div>
+                                    )}
+                                    legends={[
+                                        {
+                                            dataFrom: 'keys',
+                                            anchor: 'bottom-right',
+                                            direction: 'column',
+                                            justify: false,
+                                            translateX: 120,
+                                            translateY: 0,
+                                            itemsSpacing: 2,
+                                            itemWidth: 100,
+                                            itemHeight: 20,
+                                            itemDirection: 'left-to-right',
+                                            itemOpacity: 0.85,
+                                            symbolSize: 20,
+                                            effects: [
+                                                {
+                                                    on: 'hover',
+                                                    style: {
+                                                        itemOpacity: 1
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]}
+                                />
+                            </div>
+                            <div className="div-data">
+                                <Table className="table-sumdata">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Time</th>
+                                            <th>Ratio (%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td >MT</td>
+                                            <td >{this.state.tableData.mt[0]}</td>
+                                            <td >{this.state.tableData.mt[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td >HT</td>
+                                            <td >{this.state.tableData.ht[0]}</td>
+                                            <td >{this.state.tableData.ht[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td >WT</td>
+                                            <td >{this.state.tableData.wt[0]}</td>
+                                            <td >{this.state.tableData.wt[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td >NG cycle</td>
+                                            <td >{this.state.tableData.ngct[0]}</td>
+                                            <td >{this.state.tableData.ngct[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td >Loss</td>
+                                            <td >{this.state.tableData.loss[0]}</td>
+                                            <td >{this.state.tableData.loss[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td >N/A</td>
+                                            <td >{this.state.tableData.na[0]}</td>
+                                            <td >{this.state.tableData.na[1]}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Total</td>
+                                            <td>{this.state.tableData.total[0]}</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr className="avg-row">
+                                            <td>Avg. MT</td>
+                                            <td>{this.state.avgData.mt} s.</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr className="avg-row">
+                                            <td>Avg. HT</td>
+                                            <td>{this.state.avgData.ht} s.</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr className="avg-row">
+                                            <td>Avg. WT</td>
+                                            <td>{this.state.avgData.wt} s.</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr className="avg-row">
+                                            <td>Avg. CT</td>
+                                            <td>{this.state.avgData.ct} s.</td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </Table>
+                            </div>
                         </div>
                     </div>
                 </div>
