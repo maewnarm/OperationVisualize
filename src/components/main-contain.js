@@ -226,7 +226,7 @@ class Maincontain extends React.Component {
     render() {
         return (
             <div className="div-main-contain">
-                <button onClick={() => this.test()}>test</button>
+                <button onClick={() => this.test()}>test1</button>
                 <h1>Summary Operation Ratio</h1>
                 <Accordion defaultActiveKey="0" className="accordian-select-detail">
                     <Accordion.Item eventKey="0">
