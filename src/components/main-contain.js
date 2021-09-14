@@ -160,6 +160,8 @@ class Maincontain extends React.Component {
     getSumdata = () => {
         const sql = this.state.detailSQL
         console.log(`/sumdata/${sql.mc_name}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}`)
+        let spinner = document.querySelector('.get-data-spinner')
+        spinner.style.setProperty('visibility', 'visible')
         api.get(`/sumdata/${sql.mc_name}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}`)
             .then(results => {
                 console.log(results.data)
@@ -219,7 +221,7 @@ class Maincontain extends React.Component {
                             mt: result.avg_mt,
                             ht: result.avg_ht,
                             wt: result.avg_wt,
-                            ct: result.avg_mt + result.avg_ht + result.avg_wt
+                            ct: Number(result.avg_mt + result.avg_ht + result.avg_wt).toFixed(2)
                         }
                         arrCntData = {
                             mt: result.cnt_mt,
@@ -237,6 +239,7 @@ class Maincontain extends React.Component {
                 }, () => {
                     this.calculateCntPercentTarget()
                     this.toggleShowHideSummary(true)
+                    spinner.style.setProperty('visibility', 'hidden')
                 })
             })
             .catch(err => {
@@ -247,7 +250,7 @@ class Maincontain extends React.Component {
 
     calculateCntPercentTarget = () => {
         var percent = 0
-        const diffTime_s = Math.floor(moment(this.state.en_time).diff(moment(this.state.st_time)) / 1000 / 60)*60
+        const diffTime_s = Math.floor(moment(this.state.en_time).diff(moment(this.state.st_time)) / 1000 / 60) * 60
         const diffTime = moment.utc(diffTime_s * 1000).format("HH:mm")
         const ctTarget = Number(this.state.ct_target)
         const cntActual = this.state.cntData.mt
@@ -347,7 +350,12 @@ class Maincontain extends React.Component {
                                     </InputGroup>
                                 </div>
                             </div>
-                            <Button onClick={() => this.getSumdata()} disabled={this.state.getData_btn_disable}>Get data</Button>
+                            <div className="div-select-btn">
+                                <Spinner className="get-data-spinner" animation="border" role="status" variant="secondary">
+                                    <span className="visually-hidden"></span>
+                                </Spinner>
+                                <Button onClick={() => this.getSumdata()} disabled={this.state.getData_btn_disable}>Get data</Button>
+                            </div>
                         </Accordion.Body>
                     </Accordion.Item>
                 </Accordion>
@@ -358,7 +366,7 @@ class Maincontain extends React.Component {
                     </div>
                     <div className="div-result-main">
                         <div className="div-result-work">
-                            <p>Run time :  <b>{this.state.diff_time}</b></p>
+                            <p>Time range :  <b>{this.state.diff_time}</b></p>
                             <p>Work amount :  <b>{this.state.cntData.mt} / {this.state.cnt_target} ({this.state.per_cnt_target}%)</b></p>
                         </div>
                         <div className="div-result-oa">
@@ -375,6 +383,37 @@ class Maincontain extends React.Component {
                                     axisLeft={{
                                         format: value =>
                                             `${value}%`
+                                    }}
+                                    colors={(id,value) => {
+                                        var colorCode
+                                        const Id = id.id
+                                        if (Id === "MT")
+                                            colorCode = "#79D4FF"
+                                        else if (Id === "HT")
+                                            colorCode = "#FFE579"
+                                        else if (Id === "WT")
+                                            colorCode = "#79FFBC"
+                                        else if (Id === "NG cycle")
+                                            colorCode = "#FFBC79"
+                                        else if (Id === "Loss")
+                                            colorCode = "#FF799E"
+                                        else if (Id === "N/A")
+                                            colorCode = "#D679FF"
+                                        else
+                                            colorCode = "red"
+                                        return colorCode
+                                    }}
+                                    borderWidth="3px"
+                                    borderColor={id => {
+                                        const Id = id.data.id
+                                        switch (Id) {
+                                            case "MT":
+                                            case "HT":
+                                            case "WT":
+                                                return "#4B6EBC"
+                                            default:
+                                                return "#BC4B4B"
+                                        }
                                     }}
                                     valueFormat={value =>
                                         `${value}%`

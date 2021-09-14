@@ -58,6 +58,18 @@
     }
 }
 
+.div-select-btn {
+    display: flex;
+    width: fit-content;
+    margin-left: auto;
+    * {
+        margin: auto 0 auto 10px;
+    }
+    .get-data-spinner {
+        visibility: hidden;
+    }
+}
+
 .accordion-header button {
     color: black !important;
 }
@@ -115,6 +127,7 @@
     display: flex;
     overflow-y: hidden;
     overflow-x: auto;
+    padding-top: 30px;
     .div-chart {
         height: 500px;
         width: 70%;
