@@ -10,19 +10,20 @@ import {
     Spinner,
     InputGroup,
     FormControl,
-    ToggleButton
+    ToggleButton,
+    Alert
 } from 'react-bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { ResponsiveBar } from '@nivo/bar'
-import { AxisTickProps } from '@nivo/axes'
 import moment from 'moment'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { library } from '@fortawesome/fontawesome-svg-core'
 
 library.add(fas)
+var txtAlert = []
 
 const api = axios.create({
     baseURL: `http://127.0.0.1:8080/`
@@ -51,7 +52,7 @@ const customTick = (tick) => {
         }
     }
     return (
-        <g transform={`translate(${tick.x},${tick.y + 22})`}>
+        <g transform={`translate(${tick.x},${tick.y + 22})`} key={tick.id}>
             <line stroke="rgb(200, 200, 200)" strokeWidth={1.5} y1={-22} y2={-12} />
             <text
                 alignmentBaseline={tick.textBaseLine}
@@ -63,10 +64,10 @@ const customTick = (tick) => {
             >
                 {txts.map((txt, ind) => {
                     return (
-                        <tspan x={0} dy={18 * ind}>{txt}</tspan>
+                        <tspan x={0} dy={18 * ind} key={ind}>{txt}</tspan>
                     )
                 })}
-            </text>@
+            </text>
         </g>
     )
 }
@@ -74,6 +75,8 @@ const customTick = (tick) => {
 class Maincontain extends React.Component {
     state = {
         isLoading: false,
+        isAlert: false,
+        txtAlert: [],
         mc_names: [],
         detailSQL: {
             mc_name: [],
@@ -81,12 +84,14 @@ class Maincontain extends React.Component {
             shift: "Day",
             st_time: moment(new Date()).format("HH:mm"),
             en_time: moment(new Date()).format("HH:mm"),
-            break: "11:00-12:00"
+            break_1: "11:00-12:00",
+            break_2: "09:30-09:40",
+            break_3: "14:30-14:40"
         },
         st_date: new Date(),
         st_time: new Date(),
         en_time: new Date(),
-        diff_time: moment("00:00","HH:mm").format("HH:mm"),
+        diff_time: moment("00:00", "HH:mm").format("HH:mm"),
         getData_btn_disable: true,
         showSumData: false,
         chartKeys: ['MT', 'HT', 'WT', 'NG cycle', 'Loss', 'N/A'],
@@ -134,6 +139,7 @@ class Maincontain extends React.Component {
         cnt_target: 0,
         per_cnt_target: 0,
         graphMode: "Elements",
+        refreshMode: "Manual",
     }
 
     constructor() {
@@ -157,7 +163,7 @@ class Maincontain extends React.Component {
             })
             .catch(err => {
                 console.log(err)
-                alert("getMCname error")
+                this.setAlert(err)
             })
     }
 
@@ -185,24 +191,40 @@ class Maincontain extends React.Component {
                         detailSQL: { ...this.state.detailSQL, st_date: moment(date).format("yyyy-MM-DD") }
                     })
                 }}
-                timeInputLabel="Time:"
                 dateFormat="yyyy-MM-dd "
             />
         )
     }
 
-    TimePicker = (key) => {
+    TimePicker = (type, key) => {
         return (
             <DatePicker
-                selected={this.state[key]}
+                selected={type === "operate" ? this.state[key] : new Date(moment(this.state.detailSQL[key].split("-")[0], "HH:mm").toISOString(true))}
                 onChange={(date) => {
                     console.log(date)
-                    this.setState({
-                        [key]: date,
-                        detailSQL: { ...this.state.detailSQL, [key]: moment(date).format("HH:mm") }
-                    }, () => {
-                        this.calculateCntPercentTarget()
-                    })
+                    if (type === "operate") {
+                        console.log(type)
+                        this.setState({
+                            [key]: date,
+                            detailSQL: { ...this.state.detailSQL, [key]: moment(date).format("HH:mm") }
+                        }, () => {
+                            this.calculateCntPercentTarget()
+                        })
+                    } else if (type === "break") {
+                        console.log(type)
+                        var val = 10
+                        if (key === "break_1") {
+                            val = 60
+                        }
+                        this.setState({
+                            detailSQL: {
+                                ...this.state.detailSQL,
+                                [key]: `${moment(date).format("HH:mm")}-${moment(date).add(val, 'm').format("HH:mm")}`
+                            }
+                        }, () => {
+                            this.calculateCntPercentTarget()
+                        })
+                    }
                 }}
                 dateFormat="HH:mm"
                 showTimeInput
@@ -219,8 +241,13 @@ class Maincontain extends React.Component {
         var mcs = this.state.detailSQL.mc_name
         mcs.splice(ind, 1)
         console.log(mcs)
+        var disable = false
+        if (mcs.length === 0) {
+            disable = true
+        }
         this.setState({
-            detailSQL: { ...this.state.detailSQL, mc_name: mcs }
+            detailSQL: { ...this.state.detailSQL, mc_name: mcs },
+            getData_btn_disable: disable
         })
     }
 
@@ -238,13 +265,17 @@ class Maincontain extends React.Component {
             "Loss time": 0
         }
         var arrTableDatas = {}
-        const st_break = sql.break.split("-")[0]
-        const en_break = sql.break.split("-")[1]
+        const st_break_1 = sql.break_1.split("-")[0]
+        const en_break_1 = sql.break_1.split("-")[1]
+        const st_break_2 = sql.break_2.split("-")[0]
+        const en_break_2 = sql.break_2.split("-")[1]
+        const st_break_3 = sql.break_3.split("-")[0]
+        const en_break_3 = sql.break_3.split("-")[1]
         const mcs = sql.mc_name.join(";")
-        console.log(`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break}&${en_break}`)
+        const query = (`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break_1}&${en_break_1}&${st_break_2}&${en_break_2}&${st_break_3}&${en_break_3}`)
         let spinner = document.querySelector('.get-data-spinner')
         spinner.style.setProperty('visibility', 'visible')
-        api.get(`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break}&${en_break}`)
+        api.get(query)
             .then(results => {
                 console.log(results.data)
                 var arrChartData = {}
@@ -359,47 +390,49 @@ class Maincontain extends React.Component {
         var percent = 0
         const start_time = moment(this.state.st_time)
         const end_time = moment(this.state.en_time)
-        const st_break = moment(this.state.detailSQL.break.split("-")[0], "HH:mm")
-        const en_break = moment(this.state.detailSQL.break.split("-")[1], "HH:mm")
-        console.log(start_time)
-        console.log(st_break)
-        var diffTime_s = 0
-        var timeType = "out break"
-        if ((start_time < st_break && end_time < st_break) || (start_time > en_break && end_time > en_break)) {
-            //out break
-            console.log("out break")
-            timeType = "out break"
-            diffTime_s = end_time.diff(start_time) / 1000
-        } else if (start_time < st_break && end_time > st_break && end_time < en_break) {
-            //end in break
-            console.log("end in break")
-            timeType = "end in break"
-            diffTime_s = (end_time.diff(start_time) - end_time.diff(st_break)) / 1000
-        } else if (start_time < st_break && end_time > en_break) {
-            //cover break
-            console.log("cover break")
-            timeType = "cover break"
-            diffTime_s = (end_time.diff(start_time) - en_break.diff(st_break)) / 1000
-        } else if (start_time > st_break && start_time < en_break && end_time > en_break) {
-            //start in break
-            console.log("start in break")
-            timeType = "start in break"
-            diffTime_s = (end_time.diff(start_time) - en_break.diff(start_time)) / 1000
-        } else if (start_time > st_break && start_time < en_break && end_time > st_break && end_time < en_break) {
-            //in break
-            console.log("in break")
-            timeType = "in break"
-            diffTime_s = 0
-        }
-        if (timeType === "end in break") {
-            diffTime_s = Math.ceil(diffTime_s)
-        } else {
-            diffTime_s = Math.floor(diffTime_s)
+        var diffTime_s = end_time.diff(start_time) / 1000
+        for (var i = 1; i <= 3; i++) {
+            const st_break = moment(this.state.detailSQL[`break_${i}`].split("-")[0], "HH:mm")
+            const en_break = moment(this.state.detailSQL[`break_${i}`].split("-")[1], "HH:mm")
+            diffTime_s *= 1000
+            var timeType = "out break"
+            if ((start_time < st_break && end_time < st_break) || (start_time > en_break && end_time > en_break)) {
+                //out break
+                console.log("out break")
+                timeType = "out break"
+                diffTime_s = diffTime_s
+            } else if (start_time < st_break && end_time > st_break && end_time < en_break) {
+                //end in break
+                console.log("end in break")
+                timeType = "end in break"
+                diffTime_s -= end_time.diff(st_break)
+            } else if (start_time < st_break && end_time > en_break) {
+                //cover break
+                console.log("cover break")
+                timeType = "cover break"
+                diffTime_s -= en_break.diff(st_break)
+            } else if (start_time > st_break && start_time < en_break && end_time > en_break) {
+                //start in break
+                console.log("start in break")
+                timeType = "start in break"
+                diffTime_s -= en_break.diff(start_time)
+            } else if (start_time > st_break && start_time < en_break && end_time > st_break && end_time < en_break) {
+                //in break
+                console.log("in break")
+                timeType = "in break"
+                diffTime_s -= 0
+            }
+            diffTime_s /= 1000
+            if (timeType === "end in break") {
+                diffTime_s = Math.ceil(diffTime_s)
+            } else {
+                diffTime_s = Math.floor(diffTime_s)
+            }
         }
         diffTime_s = diffTime_s / 60
         diffTime_s = Math.floor(diffTime_s) * 60
         if (diffTime_s < 0) {
-            alert("Warning : Start time is after End time")
+            this.setAlert("Warning : Start time is after End time")
         }
         const diffTime = moment.utc(diffTime_s * 1000).format("HH:mm")
         const ctTarget = Number(this.state.ct_target)
@@ -414,7 +447,7 @@ class Maincontain extends React.Component {
         this.setState({
             diff_time: diffTime,
             cnt_target: cntTarget,
-            per_cnt_target: percent
+            per_cnt_target: percent,
         })
     }
 
@@ -433,6 +466,12 @@ class Maincontain extends React.Component {
         }
         this.setState({
             showSumData: flag,
+        })
+    }
+
+    setRefreshMode = (mode) => {
+        this.setState({
+            refreshMode: mode
         })
     }
 
@@ -457,70 +496,109 @@ class Maincontain extends React.Component {
         })
     }
 
+    setAlert = (txt) => {
+        txtAlert.push(txt)
+        this.setState({
+            isAlert: true,
+            txtAlert: txtAlert
+        }, () => {
+            var alert = setTimeout(() => {
+                var newTxtAlert = this.state.txtAlert
+                var show = false
+                for (var i = 0; i < newTxtAlert.length; i++) {
+                    console.log(newTxtAlert[i])
+                    if (newTxtAlert[i] === txt) {
+                        newTxtAlert.splice(i, 1)
+                    }
+                    if (newTxtAlert.length === 0) {
+                        show = false
+                    } else {
+                        show = true
+                    }
+                }
+                this.setState({
+                    isAlert: show,
+                    txtAlert: newTxtAlert
+                })
+            }, 5000);
+        })
+    }
+
     test = () => {
-        this.calculateCntPercentTarget()
+        console.log(this.state.detailSQL)
     }
 
     render() {
         return (
             <div className="div-main-contain">
-                {/*<button onClick={() => this.test()}>test1</button>*/}
+                {<button onClick={() => this.test()}>test1</button>}
                 <h1>Initial Stage Visualize</h1>
+                {this.state.isAlert && <Alert variant={"danger"}>{this.state.txtAlert.join("\n")}</Alert>}
                 <Accordion defaultActiveKey="0" className="accordian-select-detail">
                     <Accordion.Item eventKey="0">
                         <Accordion.Header>Operation Record details</Accordion.Header>
                         <Accordion.Body>
                             <div className="div-select-detail">
-                                <div className="select-detail-compo">
-                                    <h6>Shift :</h6>
-                                    <Dropdown as={ButtonGroup}>
-                                        <Button variant="secondary">{this.state.detailSQL.shift}</Button>
-                                        <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />
-                                        <Dropdown.Menu align="end">
-                                            <Dropdown.Item onClick={() => this.selectDetail("shift", "Day")}>Day</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => this.selectDetail("shift", "Night")}>Night</Dropdown.Item>
-                                        </Dropdown.Menu>
-                                    </Dropdown>
+                                <div className="div-select-data-1">
+                                    <div className="select-detail-compo">
+                                        <h6>Shift :</h6>
+                                        <Dropdown as={ButtonGroup}>
+                                            <Button variant="secondary">{this.state.detailSQL.shift}</Button>
+                                            <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />
+                                            <Dropdown.Menu align="end">
+                                                <Dropdown.Item onClick={() => this.selectDetail("shift", "Day")}>Day</Dropdown.Item>
+                                                <Dropdown.Item onClick={() => this.selectDetail("shift", "Night")}>Night</Dropdown.Item>
+                                            </Dropdown.Menu>
+                                        </Dropdown>
+                                    </div>
+                                    <div className="select-detail-datepicker">
+                                        <h6>Date :</h6>
+                                        {this.DatePicker()}
+                                    </div>
+                                    <div className="select-detail-datepicker">
+                                        <h6>Start time :</h6>
+                                        {this.TimePicker("operate", "st_time")}
+                                    </div>
+                                    <div className="select-detail-datepicker">
+                                        <h6>End time :</h6>
+                                        {this.TimePicker("operate", "en_time")}
+                                    </div>
                                 </div>
-                                <div className="select-detail-datepicker">
-                                    <h6>Date :</h6>
-                                    {this.DatePicker()}
+                                <div className="div-select-data-1">
+                                    <div className="select-detail-datepicker break">
+                                        <h6>Small break [morning] (10 min.)</h6>
+                                        <div className="break-time">
+                                            {this.TimePicker("break", "break_2")}
+                                            <span> - {this.state.detailSQL.break_2.split("-")[1]}</span>
+                                        </div>
+                                    </div>
+                                    <div className="select-detail-datepicker break">
+                                        <h6>Lunch break (1 hr.):</h6>
+                                        <div className="break-time">
+                                            {this.TimePicker("break", "break_1")}
+                                            <span> - {this.state.detailSQL.break_1.split("-")[1]}</span>
+                                        </div>
+                                    </div>
+                                    <div className="select-detail-datepicker break">
+                                        <h6>Small break [afternoon] (10 min.)</h6>
+                                        <div className="break-time">
+                                            {this.TimePicker("break", "break_3")}
+                                            <span> - {this.state.detailSQL.break_3.split("-")[1]}</span>
+                                        </div>
+                                    </div>
+                                    <div className="select-detail-ct">
+                                        <InputGroup>
+                                            <InputGroup.Text id="input-ct-target">CT target (s.)</InputGroup.Text>
+                                            <FormControl
+                                                aria-label="Default"
+                                                aria-describedby="inputGroup-sizing-default"
+                                                value={this.state.ct_target}
+                                                onChange={e => this.setState({ ct_target: e.target.value })}
+                                            />
+                                        </InputGroup>
+                                    </div>
                                 </div>
-                                <div className="select-detail-datepicker">
-                                    <h6>Start time :</h6>
-                                    {this.TimePicker("st_time")}
-                                </div>
-                                <div className="select-detail-datepicker">
-                                    <h6>End date :</h6>
-                                    {this.TimePicker("en_time")}
-                                </div>
-                                <div className="select-detail-compo">
-                                    <h6>Break time :</h6>
-                                    <Dropdown as={ButtonGroup}>
-                                        <Button variant="secondary">{this.state.detailSQL.break}</Button>
-                                        <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />
-                                        <Dropdown.Menu align="end">
-                                            <Dropdown.Item onClick={() => this.selectDetail("break", "11:00-12:00")}>11:00-12:00</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => this.selectDetail("break", "11:15-12:15")}>11:15-12:15</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => this.selectDetail("break", "11:30-12:30")}>11:30-12:30</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => this.selectDetail("break", "11:45-12:45")}>11:45-12:45</Dropdown.Item>
-                                            <Dropdown.Item onClick={() => this.selectDetail("break", "12:00-13:00")}>12:00-13:00</Dropdown.Item>
-                                        </Dropdown.Menu>
-                                    </Dropdown>
-                                </div>
-                                <div className="select-detail-ct">
-                                    <br />
-                                    <InputGroup>
-                                        <InputGroup.Text id="input-ct-target">CT target (s.)</InputGroup.Text>
-                                        <FormControl
-                                            aria-label="Default"
-                                            aria-describedby="inputGroup-sizing-default"
-                                            value={this.state.ct_target}
-                                            onChange={e => this.setState({ ct_target: e.target.value })}
-                                        />
-                                    </InputGroup>
-                                </div>
-                                <div className="select-detail-compo">
+                                <div className="select-detail-mc">
                                     <Dropdown as={ButtonGroup}>
                                         <Button variant="secondary">Machine name</Button>
                                         <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />
@@ -566,8 +644,29 @@ class Maincontain extends React.Component {
                                 <ButtonGroup>
                                     <ToggleButton
                                         type="radio"
+                                        checked={this.state.refreshMode === "Manual"}
+                                        variant={this.state.refreshMode === "Manual" ? 'outline-info' : 'outline-secondary'}
+                                        onClick={() => this.setRefreshMode("Manual")}
+                                    >
+                                        Elements
+                                    </ToggleButton>
+                                    <ToggleButton
+                                        type="radio"
+                                        checked={this.state.refreshMode === "Auto"}
+                                        variant={this.state.refreshMode === "Auto" ? 'outline-info' : 'outline-secondary'}
+                                        onClick={() => this.setRefreshMode("Auto")}
+                                    >
+                                        OA,Loss
+                                    </ToggleButton>
+                                </ButtonGroup>
+                            </div>
+                            <div>
+                                <b>Chart mode : </b>
+                                <ButtonGroup>
+                                    <ToggleButton
+                                        type="radio"
                                         checked={this.state.graphMode === "Elements"}
-                                        variant={this.state.graphMode === "Elements" ? 'outline-success' : 'outline-danger'}
+                                        variant={this.state.graphMode === "Elements" ? 'outline-info' : 'outline-secondary'}
                                         onClick={() => this.setGraphMode("Elements")}
                                     >
                                         Elements
@@ -575,7 +674,7 @@ class Maincontain extends React.Component {
                                     <ToggleButton
                                         type="radio"
                                         checked={this.state.graphMode === "OA,Loss"}
-                                        variant={this.state.graphMode === "OA,Loss" ? 'outline-success' : 'outline-danger'}
+                                        variant={this.state.graphMode === "OA,Loss" ? 'outline-info' : 'outline-secondary'}
                                         onClick={() => this.setGraphMode("OA,Loss")}
                                     >
                                         OA,Loss
