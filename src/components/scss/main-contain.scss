@@ -173,7 +173,7 @@
         display: flex;
         flex-flow: column;
         text-align: left;
-        div {
+        .refresh-btn {
             display: flex;
             .get-data-spinner {
                 margin: auto 0 auto 5px;

@@ -95,7 +95,7 @@ class Maincontain extends React.Component {
         diff_time: moment("00:00", "HH:mm").format("HH:mm"),
         getData_btn_disable: true,
         showSumData: false,
-        chartKeys: ['MT', 'HT', 'WT', 'NG cycle', 'Loss', 'N/A'],
+        chartKeys: ['OA', 'Loss time'],
         chartData: [{
             mcname: "",
             p_mt: 0,
@@ -125,6 +125,7 @@ class Maincontain extends React.Component {
             loss: 0,
             na: 0
         },
+        avgDatas: {},
         avgData: {
             mt: 0,
             ht: 0,
@@ -266,6 +267,7 @@ class Maincontain extends React.Component {
             "Loss time": 0
         }
         var arrTableDatas = {}
+        var arrAvgDatas = {}
         const st_break_1 = sql.break_1.split("-")[0]
         const en_break_1 = sql.break_1.split("-")[1]
         const st_break_2 = sql.break_2.split("-")[0]
@@ -301,8 +303,8 @@ class Maincontain extends React.Component {
                             "NG cycle": result.p_ngct,
                             Loss: result.p_loss,
                             "N/A": result.p_na,
-                            OA: result.p_mt + result.p_ht,
-                            "Loss time": result.p_wt + result.p_ngct + result.p_loss + result.p_na
+                            OA: result.p_mt + result.p_ht + result.p_wt,
+                            "Loss time": result.p_ngct + result.p_loss + result.p_na
                         }
                         arrSumChartData = {
                             MT: arrSumChartData.MT + result.p_mt,
@@ -311,8 +313,8 @@ class Maincontain extends React.Component {
                             "NG cycle": arrSumChartData["NG cycle"] + result.p_ngct,
                             Loss: arrSumChartData.Loss + result.p_loss,
                             "N/A": arrSumChartData["N/A"] + result.p_na,
-                            OA: arrSumChartData.OA + result.p_mt + result.p_ht,
-                            "Loss time": arrSumChartData["Loss time"] + result.p_wt + result.p_ngct + result.p_loss + result.p_na
+                            OA: arrSumChartData.OA + result.p_mt + result.p_ht + result.p_wt,
+                            "Loss time": arrSumChartData["Loss time"] + result.p_ngct + result.p_loss + result.p_na
                         }
                         arrTableData = {
                             total: [
@@ -356,6 +358,7 @@ class Maincontain extends React.Component {
                         }
                         console.log(arrChartData)
                         arrTableDatas = { ...arrTableDatas, [result.mcname]: arrTableData }
+                        arrAvgDatas = { ...arrAvgDatas, [result.mcname]: arrAvgData }
                         arrChartDatas.push(arrChartData)
                         last_mc = result.mcname
                     })
@@ -371,13 +374,21 @@ class Maincontain extends React.Component {
                         "Loss time": Number(arrSumChartData["Loss time"] / results.data.length).toFixed(2)
                     }
                 }
-                console.log(arrSumChartData)
                 arrChartDatas.push(arrSumChartData)
+                arrChartDatas.forEach((chartData, ind) => {
+                    Object.keys(chartData).forEach(key => {
+                        if (key !== "mcname") {
+                            chartData = { ...chartData, [key]: Number(chartData[key]).toFixed(2) }
+                        }
+                    })
+                    arrChartDatas[ind] = chartData
+                })
                 this.setState({
                     chartData: arrChartDatas,
                     tableData: arrTableData,
                     tableDatas: arrTableDatas,
                     avgData: arrAvgData,
+                    avgDatas: arrAvgDatas,
                     cntData: arrCntData,
                     mc_name_data: sql.mc_name,
                     mc_name_data_selected: last_mc
@@ -496,8 +507,15 @@ class Maincontain extends React.Component {
     setRefresh = () => {
         refreshData = setTimeout(() => {
             console.log("refresh")
-            this.getSumdata()
-        }, 3000);
+            const date = new Date()
+            this.setState({
+                en_time: date,
+                detailSQL: { ...this.state.detailSQL, en_time: moment(date).format("HH:mm") }
+            }, () => {
+                this.calculateCntPercentTarget()
+                this.getSumdata()
+            })
+        }, 10000);
     }
 
     setGraphMode = (mode) => {
@@ -517,7 +535,8 @@ class Maincontain extends React.Component {
     setMCTableData = (mc) => {
         this.setState({
             mc_name_data_selected: mc,
-            tableData: this.state.tableDatas[mc]
+            tableData: this.state.tableDatas[mc],
+            avgData: this.state.avgDatas[mc]
         })
     }
 
@@ -556,7 +575,7 @@ class Maincontain extends React.Component {
     render() {
         return (
             <div className="div-main-contain">
-                {<button onClick={() => this.test()}>test1</button>}
+                {/*<button onClick={() => this.test()}>test1</button>*/}
                 <h1>Initial Stage Visualize</h1>
                 {this.state.isAlert && <Alert variant={"danger"}>{this.state.txtAlert.join("\n")}</Alert>}
                 <Accordion defaultActiveKey="0" className="accordian-select-detail">
@@ -667,7 +686,7 @@ class Maincontain extends React.Component {
                         <div className="div-result-btn-mode">
                             <div className="div-btn-group">
                                 <b>Refresh mode : </b>
-                                <div>
+                                <div className="refresh-btn">
                                     <ButtonGroup>
                                         <ToggleButton
                                             type="radio"
