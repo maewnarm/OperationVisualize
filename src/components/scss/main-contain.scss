@@ -108,9 +108,10 @@
     * {
         margin: auto 0 auto 10px;
     }
-    .get-data-spinner {
-        visibility: hidden;
-    }
+}
+
+.get-data-spinner {
+    visibility: hidden;
 }
 
 .accordion-header button {
@@ -168,6 +169,17 @@
     display: flex;
     justify-content: space-between;
     margin: 0 10px 0 10px;
+    .div-btn-group {
+        display: flex;
+        flex-flow: column;
+        text-align: left;
+        div {
+            display: flex;
+            .get-data-spinner {
+                margin: auto 0 auto 5px;
+            }
+        }
+    }
     div span {
         margin-right: 10px;
     }

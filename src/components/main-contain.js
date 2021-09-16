@@ -24,6 +24,7 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 
 library.add(fas)
 var txtAlert = []
+var refreshData = null
 
 const api = axios.create({
     baseURL: `http://127.0.0.1:8080/`
@@ -52,8 +53,8 @@ const customTick = (tick) => {
         }
     }
     return (
-        <g transform={`translate(${tick.x},${tick.y + 22})`} key={tick.id}>
-            <line stroke="rgb(200, 200, 200)" strokeWidth={1.5} y1={-22} y2={-12} />
+        <g transform={`translate(${tick.x},${tick.y + 12})`} key={tick.id}>
+            <line stroke="rgb(200, 200, 200)" strokeWidth={1.5} y1={-12} y2={-2} />
             <text
                 alignmentBaseline={tick.textBaseLine}
                 textAnchor={tick.textAnchor}
@@ -64,7 +65,7 @@ const customTick = (tick) => {
             >
                 {txts.map((txt, ind) => {
                     return (
-                        <tspan x={0} dy={18 * ind} key={ind}>{txt}</tspan>
+                        <tspan x={0} dy={ind === 0 ? 0 : 18} key={ind}>{txt}</tspan>
                     )
                 })}
             </text>
@@ -138,7 +139,7 @@ class Maincontain extends React.Component {
         ct_target: 0,
         cnt_target: 0,
         per_cnt_target: 0,
-        graphMode: "Elements",
+        graphMode: "OA,Loss",
         refreshMode: "Manual",
     }
 
@@ -273,8 +274,14 @@ class Maincontain extends React.Component {
         const en_break_3 = sql.break_3.split("-")[1]
         const mcs = sql.mc_name.join(";")
         const query = (`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break_1}&${en_break_1}&${st_break_2}&${en_break_2}&${st_break_3}&${en_break_3}`)
-        let spinner = document.querySelector('.get-data-spinner')
-        spinner.style.setProperty('visibility', 'visible')
+        let spin = document.querySelector('.get-data-spinner')
+        let spinners = document.querySelectorAll('.get-data-spinner')
+        console.log(spin)
+        console.log(spinners)
+        spinners.forEach(spinner => {
+            console.log(spinner)
+            spinner.style.setProperty('visibility', 'visible')
+        })
         api.get(query)
             .then(results => {
                 console.log(results.data)
@@ -377,7 +384,12 @@ class Maincontain extends React.Component {
                 }, () => {
                     this.calculateCntPercentTarget()
                     this.toggleShowHideSummary(true)
-                    spinner.style.setProperty('visibility', 'hidden')
+                    spinners.forEach(spinner => {
+                        spinner.style.setProperty('visibility', 'hidden')
+                    })
+                    if (this.state.refreshMode === "Auto") {
+                        this.setRefresh()
+                    }
                 })
             })
             .catch(err => {
@@ -470,9 +482,22 @@ class Maincontain extends React.Component {
     }
 
     setRefreshMode = (mode) => {
+        if (refreshData !== null) {
+            clearTimeout(refreshData)
+        }
+        if (mode === "Auto") {
+            this.setRefresh()
+        }
         this.setState({
             refreshMode: mode
         })
+    }
+
+    setRefresh = () => {
+        refreshData = setTimeout(() => {
+            console.log("refresh")
+            this.getSumdata()
+        }, 3000);
     }
 
     setGraphMode = (mode) => {
@@ -640,37 +665,35 @@ class Maincontain extends React.Component {
                             <p>Work amount :  <b>{this.state.cntData.mt} / {this.state.cnt_target} ({this.state.per_cnt_target}%)</b></p>
                         </div>
                         <div className="div-result-btn-mode">
-                            <div>
-                                <ButtonGroup>
-                                    <ToggleButton
-                                        type="radio"
-                                        checked={this.state.refreshMode === "Manual"}
-                                        variant={this.state.refreshMode === "Manual" ? 'outline-info' : 'outline-secondary'}
-                                        onClick={() => this.setRefreshMode("Manual")}
-                                    >
-                                        Elements
-                                    </ToggleButton>
-                                    <ToggleButton
-                                        type="radio"
-                                        checked={this.state.refreshMode === "Auto"}
-                                        variant={this.state.refreshMode === "Auto" ? 'outline-info' : 'outline-secondary'}
-                                        onClick={() => this.setRefreshMode("Auto")}
-                                    >
-                                        OA,Loss
-                                    </ToggleButton>
-                                </ButtonGroup>
+                            <div className="div-btn-group">
+                                <b>Refresh mode : </b>
+                                <div>
+                                    <ButtonGroup>
+                                        <ToggleButton
+                                            type="radio"
+                                            checked={this.state.refreshMode === "Manual"}
+                                            variant={this.state.refreshMode === "Manual" ? 'outline-info' : 'outline-secondary'}
+                                            onClick={() => this.setRefreshMode("Manual")}
+                                        >
+                                            Manual
+                                        </ToggleButton>
+                                        <ToggleButton
+                                            type="radio"
+                                            checked={this.state.refreshMode === "Auto"}
+                                            variant={this.state.refreshMode === "Auto" ? 'outline-info' : 'outline-secondary'}
+                                            onClick={() => this.setRefreshMode("Auto")}
+                                        >
+                                            Auto
+                                        </ToggleButton>
+                                    </ButtonGroup>
+                                    <Spinner className="get-data-spinner" animation="border" role="status" variant="secondary">
+                                        <span className="visually-hidden"></span>
+                                    </Spinner>
+                                </div>
                             </div>
-                            <div>
+                            <div className="div-btn-group">
                                 <b>Chart mode : </b>
                                 <ButtonGroup>
-                                    <ToggleButton
-                                        type="radio"
-                                        checked={this.state.graphMode === "Elements"}
-                                        variant={this.state.graphMode === "Elements" ? 'outline-info' : 'outline-secondary'}
-                                        onClick={() => this.setGraphMode("Elements")}
-                                    >
-                                        Elements
-                                    </ToggleButton>
                                     <ToggleButton
                                         type="radio"
                                         checked={this.state.graphMode === "OA,Loss"}
@@ -679,10 +702,18 @@ class Maincontain extends React.Component {
                                     >
                                         OA,Loss
                                     </ToggleButton>
+                                    <ToggleButton
+                                        type="radio"
+                                        checked={this.state.graphMode === "Elements"}
+                                        variant={this.state.graphMode === "Elements" ? 'outline-info' : 'outline-secondary'}
+                                        onClick={() => this.setGraphMode("Elements")}
+                                    >
+                                        Elements
+                                    </ToggleButton>
                                 </ButtonGroup>
                             </div>
-                            <div>
-                                <span>Data in table :</span>
+                            <div className="div-btn-group">
+                                <b>Data in table :</b>
                                 <Dropdown as={ButtonGroup}>
                                     <Button variant="secondary">{this.state.mc_name_data_selected}</Button>
                                     <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />
