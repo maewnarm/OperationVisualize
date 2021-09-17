@@ -142,6 +142,7 @@ class Maincontain extends React.Component {
         per_cnt_target: 0,
         graphMode: "OA,Loss",
         refreshMode: "Manual",
+        lastRefresh: new Date(),
     }
 
     constructor() {
@@ -391,7 +392,8 @@ class Maincontain extends React.Component {
                     avgDatas: arrAvgDatas,
                     cntData: arrCntData,
                     mc_name_data: sql.mc_name,
-                    mc_name_data_selected: last_mc
+                    mc_name_data_selected: last_mc,
+                    lastRefresh: new Date()
                 }, () => {
                     this.calculateCntPercentTarget()
                     this.toggleShowHideSummary(true)
@@ -399,7 +401,7 @@ class Maincontain extends React.Component {
                         spinner.style.setProperty('visibility', 'hidden')
                     })
                     if (this.state.refreshMode === "Auto") {
-                        this.setRefresh()
+                        this.setRefreshMode("Auto")
                     }
                 })
             })
@@ -709,6 +711,7 @@ class Maincontain extends React.Component {
                                         <span className="visually-hidden"></span>
                                     </Spinner>
                                 </div>
+                                <span>Last update : {moment(this.state.lastRefresh).format("HH:mm:ss")}</span>
                             </div>
                             <div className="div-btn-group">
                                 <b>Chart mode : </b>
