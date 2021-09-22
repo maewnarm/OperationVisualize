@@ -87,7 +87,8 @@ class Maincontain extends React.Component {
             en_time: moment(new Date()).format("HH:mm"),
             break_1: "11:00-12:00",
             break_2: "09:30-09:40",
-            break_3: "14:30-14:40"
+            break_3: "14:30-14:40",
+            break_4: "16:30-16:50"
         },
         st_date: new Date(),
         st_time: new Date(),
@@ -218,6 +219,8 @@ class Maincontain extends React.Component {
                         var val = 10
                         if (key === "break_1") {
                             val = 60
+                        } else if (key === "break_4") {
+                            val = 20
                         }
                         this.setState({
                             detailSQL: {
@@ -275,8 +278,10 @@ class Maincontain extends React.Component {
         const en_break_2 = sql.break_2.split("-")[1]
         const st_break_3 = sql.break_3.split("-")[0]
         const en_break_3 = sql.break_3.split("-")[1]
+        const st_break_4 = sql.break_4.split("-")[0]
+        const en_break_4 = sql.break_4.split("-")[1]
         const mcs = sql.mc_name.join(";")
-        const query = (`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break_1}&${en_break_1}&${st_break_2}&${en_break_2}&${st_break_3}&${en_break_3}`)
+        const query = (`/sumdata/${mcs}&${sql.st_date}&${sql.shift}&${sql.st_time}&${sql.en_time}&${st_break_1}&${en_break_1}&${st_break_2}&${en_break_2}&${st_break_3}&${en_break_3}&${st_break_4}&${en_break_4}`)
         let spin = document.querySelector('.get-data-spinner')
         let spinners = document.querySelectorAll('.get-data-spinner')
         console.log(spin)
@@ -632,6 +637,15 @@ class Maincontain extends React.Component {
                                             <span> - {this.state.detailSQL.break_3.split("-")[1]}</span>
                                         </div>
                                     </div>
+                                    <div className="select-detail-datepicker break">
+                                        <h6>OT. break [afternoon] (20 min.)</h6>
+                                        <div className="break-time">
+                                            {this.TimePicker("break", "break_4")}
+                                            <span> - {this.state.detailSQL.break_4.split("-")[1]}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="select-detail-mc">
                                     <div className="select-detail-ct">
                                         <InputGroup>
                                             <InputGroup.Text id="input-ct-target">CT target (s.)</InputGroup.Text>
@@ -643,8 +657,6 @@ class Maincontain extends React.Component {
                                             />
                                         </InputGroup>
                                     </div>
-                                </div>
-                                <div className="select-detail-mc">
                                     <Dropdown as={ButtonGroup}>
                                         <Button variant="secondary">Machine name</Button>
                                         <Dropdown.Toggle split variant="secondary" id="dropdown-split-basic" />

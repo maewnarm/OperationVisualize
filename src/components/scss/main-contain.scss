@@ -62,10 +62,6 @@
         .select-detail-datepicker:last-child {
             margin-right: 0px;
         }
-        .select-detail-ct {
-            max-width: 200px;
-            margin-top: 5px;
-        }
     }
     .select-detail-mc {
         text-align: left;
@@ -73,6 +69,10 @@
         min-width: fit-content;
         max-width: 200px;
         margin: 0 15px 15px 0;
+        .select-detail-ct {
+            max-width: 200px;
+            margin-bottom: 5px;
+        }
         .div-selected-value {
             display: flex;
             margin-top: 5px;
