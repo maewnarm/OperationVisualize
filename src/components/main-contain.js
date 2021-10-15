@@ -17,6 +17,8 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { ResponsiveBar } from '@nivo/bar'
+import { ResponsiveBullet } from '@nivo/bullet'
+import { BasicTooltip, useTooltip } from '@nivo/tooltip'
 import moment from 'moment'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
@@ -37,6 +39,104 @@ const commonProps = {
     labelSkipWidth: 16,
     labelSkipHeight: 16,
 }
+
+const data = [
+    {
+        "id": "temp.",
+        "ranges": [
+            96,
+            10,
+            104,
+            0,
+            120
+        ],
+        "measures": [
+            32
+        ],
+        "markers": [
+            113
+        ]
+    },
+    {
+        "id": "power",
+        "ranges": [
+            0.389616390278877,
+            0.3529904192182939,
+            1.363634672971878,
+            0,
+            2
+        ],
+        "measures": [
+            0.08997297601559893,
+            0.15675679465991488
+        ],
+        "markers": [
+            1.217072154408654
+        ]
+    },
+    {
+        "id": "volume",
+        "ranges": [
+            25,
+            8,
+            7,
+            0,
+            3,
+            36,
+            0,
+            40
+        ],
+        "measures": [
+            15
+        ],
+        "markers": [
+            37
+        ]
+    },
+    {
+        "id": "cost",
+        "ranges": [
+            5466,
+            93864,
+            260013,
+            0,
+            500000
+        ],
+        "measures": [
+            77927,
+            78955
+        ],
+        "markers": [
+            456368
+        ]
+    },
+    {
+        "id": "revenue",
+        "ranges": [
+            3,
+            2,
+            9,
+            0,
+            13
+        ],
+        "measures": [
+            8
+        ],
+        "markers": [
+            9.917280347210818,
+            8.12683789537778
+        ]
+    }
+]
+const commonPropsBullet = {
+    width: 900,
+    height: 360,
+    margin: { top: 10, right: 30, bottom: 50, left: 110 },
+    titleOffsetX: -50,
+    spacing: 30,
+    animate: false,
+}
+
 const customTick = (tick) => {
     //console.log(tick)
     const val = tick.value
@@ -70,6 +170,55 @@ const customTick = (tick) => {
                 })}
             </text>
         </g>
+    )
+}
+
+const CustomRange = ({ x, y, width, height, color, data, onMouseEnter, onMouseMove, onMouseLeave }, visibleIndex) => {
+    const { showTooltipFromEvent, showTooltipAt, hideTooltip } = useTooltip()
+    console.log(data)
+    const v0 = data.v0
+    const v1 = data.v1
+    return (
+        <rect
+            x={x}
+            y={y}
+            rx={5}
+            ry={5}
+            width={width}
+            height={height}
+            fill={color}
+            onMouseEnter={(event) =>
+                showTooltipFromEvent(<BasicTooltip
+                    id={
+                        v1 ? (
+                            <span>
+                                <strong>{v0}</strong> to <strong>{v1}</strong>
+                            </span>
+                        ) : (
+                            <strong>{v0}</strong>
+                        )
+                    }
+                    enableChip={true}
+                    color={color}
+                />, event)
+            }
+            onMouseMove={(event) =>
+                showTooltipFromEvent(<BasicTooltip
+                    id={
+                        v1 ? (
+                            <span>
+                                <strong>{v0}</strong> to <strong>{v1}</strong>
+                            </span>
+                        ) : (
+                            <strong>{v0}</strong>
+                        )
+                    }
+                    enableChip={true}
+                    color={color}
+                />, event)
+            }
+            onMouseLeave={() => hideTooltip()}
+        />
     )
 }
 
@@ -144,6 +293,9 @@ class Maincontain extends React.Component {
         graphMode: "OA,Loss",
         refreshMode: "Manual",
         lastRefresh: new Date(),
+        showSumTimechart: false,
+        timechartData: [],
+        timechartVisibleIndex: [],
     }
 
     constructor() {
@@ -482,14 +634,17 @@ class Maincontain extends React.Component {
     }
 
     toggleShowHideSummary = (flag) => {
+        let tabBtn = document.querySelector('.div-result-oa-btn')
         let chart = document.querySelector('.div-result-main')
         let chev = document.querySelector('.svg-rotate')
         let h = document.querySelector('.div-result-main').scrollHeight
         if (flag) {
+            tabBtn.style.setProperty('--tab-color', 'rgb(225, 255, 234)')
             chart.style.setProperty('visibility', 'visible')
             chart.style.setProperty('--max-height', h + 'px')
             chev.style.setProperty('--svg-rotate', 'rotate(0deg)')
         } else {
+            tabBtn.style.setProperty('--tab-color', 'rgb(255, 255, 255)')
             chart.style.setProperty('visibility', 'hidden')
             chart.style.setProperty('--max-height', '0')
             chev.style.setProperty('--svg-rotate', 'rotate(180deg)')
@@ -572,6 +727,27 @@ class Maincontain extends React.Component {
                     txtAlert: newTxtAlert
                 })
             }, 5000);
+        })
+    }
+
+    toggleShowHideTimechart = (flag) => {
+        let tabBtn = document.querySelector('.div-result-timechart-btn')
+        let chart = document.querySelector('.div-result-timechart')
+        let chev = document.querySelector('.svg-rotate-timechart')
+        let h = document.querySelector('.div-result-timechart').scrollHeight
+        if (flag) {
+            tabBtn.style.setProperty('--tab-color', 'rgb(255, 230, 217)')
+            chart.style.setProperty('visibility', 'visible')
+            chart.style.setProperty('--max-height', h + 'px')
+            chev.style.setProperty('--svg-rotate', 'rotate(0deg)')
+        } else {
+            tabBtn.style.setProperty('--tab-color', 'rgb(255, 255, 255)')
+            chart.style.setProperty('visibility', 'hidden')
+            chart.style.setProperty('--max-height', '0')
+            chev.style.setProperty('--svg-rotate', 'rotate(180deg)')
+        }
+        this.setState({
+            showSumTimechart: flag,
         })
     }
 
@@ -926,6 +1102,20 @@ class Maincontain extends React.Component {
                                 </Table>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div className="div-summary-timechart">
+                    <div className="div-result-timechart-btn" onClick={() => this.toggleShowHideTimechart(!this.state.showSumTimechart)}>
+                        <p>Timechart data</p>
+                        <FontAwesomeIcon icon={['fas', 'chevron-up']} className="svg-rotate-timechart" />
+                    </div>
+                    <div className="div-result-timechart">
+                        <p>Bullet</p>
+                        <ResponsiveBullet
+                            {...commonPropsBullet}
+                            data={data}
+                            rangeComponent={(props) => CustomRange(props,this.state.timechartVisibleIndex)}
+                        />
                     </div>
                 </div>
             </div >

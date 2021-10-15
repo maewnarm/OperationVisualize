@@ -1,6 +1,7 @@
 :root {
-    --max-height: 0px;
+    --max-height: 1px;
     --svg-rotate: rotate(180deg);
+    --tab-color: rgb(255, 255, 255)
 }
 
 .accordian-select-detail {
@@ -126,15 +127,19 @@
     visibility: hidden;
 }
 
-.div-summary-data {
+.div-summary-data,
+.div-summary-timechart {
     overflow: hidden;
-    border: 1px solid rgb(184, 184, 184);
+    border: 1px solid rgb(220, 220, 220);
+    border-radius: 5px;
     width: 80%;
     margin: 10px auto 10px auto;
-    border-radius: 5px;
-    .div-result-oa-btn {
+    .div-result-oa-btn,
+    .div-result-timechart-btn {
         position: relative;
-        background-color: rgb(225, 255, 234);
+        background-color: var(--tab-color);
+        transition-duration: 0.35s;
+        transition-timing-function: ease-in-out;
         p {
             padding: 8px 0;
             margin-bottom: 0;
@@ -153,13 +158,22 @@
             transform: var(--svg-rotate);
         }
     }
-    .div-result-oa-btn:hover {
+    .div-result-oa-btn:hover,
+    .div-result-timechart-btn:hover {
         cursor: pointer;
     }
 }
 
 .div-result-main {
     visibility: hidden;
+    max-height: var(--max-height);
+    transition-duration: 0.35s;
+    transition-timing-function: ease-in-out;
+}
+
+.div-result-timechart {
+    visibility: hidden;
+    height: var(--max-height);
     max-height: var(--max-height);
     transition-duration: 0.35s;
     transition-timing-function: ease-in-out;
@@ -263,4 +277,8 @@
     p:last-child {
         background-color: rgb(255, 226, 237);
     }
+}
+
+.div-result-timechart div div svg g {
+    
 }
