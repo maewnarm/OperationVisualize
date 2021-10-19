@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import './scss/main-contain.scss'
 import {
@@ -18,6 +18,7 @@ import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css"
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveBullet } from '@nivo/bullet'
+import { ResponsiveHeatMap } from '@nivo/heatmap'
 import { BasicTooltip, useTooltip } from '@nivo/tooltip'
 import moment from 'moment'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -31,194 +32,411 @@ var refreshData = null
 const api = axios.create({
     baseURL: `http://127.0.0.1:8080/`
 })
-const commonProps = {
-    margin: { top: 30, right: 150, bottom: 60, left: 80 },
-    indexBy: 'mcname',
-    padding: 0.2,
-    labelTextColor: 'inherit:opacity',
-    labelSkipWidth: 16,
-    labelSkipHeight: 16,
-}
 
-const data = [
-    {
-        "id": "temp.",
-        "ranges": [
-            96,
-            10,
-            104,
-            0,
-            120
-        ],
-        "measures": [
-            32
-        ],
-        "markers": [
-            113
-        ]
-    },
-    {
-        "id": "power",
-        "ranges": [
-            0.389616390278877,
-            0.3529904192182939,
-            1.363634672971878,
-            0,
-            2
-        ],
-        "measures": [
-            0.08997297601559893,
-            0.15675679465991488
-        ],
-        "markers": [
-            1.217072154408654
-        ]
-    },
-    {
-        "id": "volume",
-        "ranges": [
-            25,
-            8,
-            7,
-            0,
-            3,
-            36,
-            0,
-            40
-        ],
-        "measures": [
-            15
-        ],
-        "markers": [
-            37
-        ]
-    },
-    {
-        "id": "cost",
-        "ranges": [
-            5466,
-            93864,
-            260013,
-            0,
-            500000
-        ],
-        "measures": [
-            77927,
-            78955
-        ],
-        "markers": [
-            456368
-        ]
-    },
-    {
-        "id": "revenue",
-        "ranges": [
-            3,
-            2,
-            9,
-            0,
-            13
-        ],
-        "measures": [
-            8
-        ],
-        "markers": [
-            9.917280347210818,
-            8.12683789537778
-        ]
+const BarChart = (chartData, chartKeys) => {
+    const commonProps = {
+        margin: { top: 30, right: 150, bottom: 60, left: 80 },
+        indexBy: 'mcname',
+        padding: 0.2,
+        labelTextColor: 'inherit:opacity',
+        labelSkipWidth: 16,
+        labelSkipHeight: 16,
     }
-]
-const commonPropsBullet = {
-    width: 900,
-    height: 360,
-    margin: { top: 10, right: 30, bottom: 50, left: 110 },
-    titleOffsetX: -50,
-    spacing: 30,
-    animate: false,
-}
-
-const customTick = (tick) => {
-    //console.log(tick)
-    const val = tick.value
-    const len = val.length
-    const line = Math.ceil(len / 15)
-    var txts = []
-    var txtInd = 0
-    for (var i = 1; i <= line; i++) {
-        if (i < line) {
-            txts.push(val.substring(txtInd, txtInd + 15))
-            txtInd += 15
-        } else {
-            txts.push(val.substring(txtInd, len))
+    const customTick = (tick) => {
+        //console.log(tick)
+        const val = tick.value
+        const len = val.length
+        const line = Math.ceil(len / 15)
+        var txts = []
+        var txtInd = 0
+        for (var i = 1; i <= line; i++) {
+            if (i < line) {
+                txts.push(val.substring(txtInd, txtInd + 15))
+                txtInd += 15
+            } else {
+                txts.push(val.substring(txtInd, len))
+            }
         }
+        return (
+            <g transform={`translate(${tick.x},${tick.y + 12})`} key={tick.id}>
+                <line stroke="rgb(200, 200, 200)" strokeWidth={1.5} y1={-12} y2={-2} />
+                <text
+                    alignmentBaseline={tick.textBaseLine}
+                    textAnchor={tick.textAnchor}
+                    style={{
+                        fontSize: 10,
+                    }}
+                    transform={`translate(${tick.textX},${tick.textY})`}
+                >
+                    {txts.map((txt, ind) => {
+                        return (
+                            <tspan x={0} dy={ind === 0 ? 0 : 18} key={ind}>{txt}</tspan>
+                        )
+                    })}
+                </text>
+            </g>
+        )
     }
     return (
-        <g transform={`translate(${tick.x},${tick.y + 12})`} key={tick.id}>
-            <line stroke="rgb(200, 200, 200)" strokeWidth={1.5} y1={-12} y2={-2} />
-            <text
-                alignmentBaseline={tick.textBaseLine}
-                textAnchor={tick.textAnchor}
-                style={{
-                    fontSize: 10,
-                }}
-                transform={`translate(${tick.textX},${tick.textY})`}
-            >
-                {txts.map((txt, ind) => {
-                    return (
-                        <tspan x={0} dy={ind === 0 ? 0 : 18} key={ind}>{txt}</tspan>
-                    )
-                })}
-            </text>
-        </g>
+        <ResponsiveBar
+            {...commonProps}
+            data={chartData}
+            keys={chartKeys}
+            maxValue={100}
+            padding={0.2}
+            layout="vertical"
+            enableGridY={true}
+            enableGridX={false}
+            axisBottom={{
+                renderTick: customTick
+            }}
+            axisLeft={{
+                format: value =>
+                    `${value}%`
+            }}
+            colors={(id, value) => {
+                var colorCode
+                const Id = id.id
+                if (Id === "MT")
+                    colorCode = "#79D4FF"
+                else if (Id === "HT")
+                    colorCode = "#FFE579"
+                else if (Id === "WT")
+                    colorCode = "#79FFBC"
+                else if (Id === "NG cycle")
+                    colorCode = "#FFBC79"
+                else if (Id === "Loss")
+                    colorCode = "#FF799E"
+                else if (Id === "N/A")
+                    colorCode = "#D679FF"
+                else if (Id === "OA")
+                    colorCode = "#79D4FF"
+                else if (Id === "Loss time")
+                    colorCode = "#FF799E"
+                else
+                    colorCode = "red"
+                return colorCode
+            }}
+            borderWidth="3px"
+            borderColor={id => {
+                const Id = id.data.id
+                switch (Id) {
+                    case "MT":
+                    case "HT":
+                    case "WT":
+                    case "OA":
+                        return "#4B6EBC"
+                    default:
+                        return "#BC4B4B"
+                }
+            }}
+            valueFormat={value =>
+                `${value}%`
+            }
+            tooltip={({ id, value, color }) => (
+                <div
+                    style={{
+                        padding: 12,
+                        color,
+                        background: '#222222',
+                    }}
+                >
+                    <strong>
+                        {id} : {value}%
+                    </strong>
+                </div>
+            )}
+            legends={[
+                {
+                    dataFrom: 'keys',
+                    anchor: 'bottom-right',
+                    direction: 'column',
+                    justify: false,
+                    translateX: 120,
+                    translateY: 0,
+                    itemsSpacing: 2,
+                    itemWidth: 100,
+                    itemHeight: 20,
+                    itemDirection: 'left-to-right',
+                    itemOpacity: 0.85,
+                    symbolSize: 20,
+                    effects: [
+                        {
+                            on: 'hover',
+                            style: {
+                                itemOpacity: 1
+                            }
+                        }
+                    ]
+                }
+            ]}
+        />
     )
 }
 
-const CustomRange = ({ x, y, width, height, color, data, onMouseEnter, onMouseMove, onMouseLeave }, visibleIndex) => {
-    const { showTooltipFromEvent, showTooltipAt, hideTooltip } = useTooltip()
-    console.log(data)
-    const v0 = data.v0
-    const v1 = data.v1
+const BulletChart = (props) => {
+    const [MaxValue, setMaxValue] = useState(10)
+    const { visibleIndex } = props
+    const commonProps = {
+        width: 900,
+        height: 360,
+        margin: { top: 10, right: 30, bottom: 50, left: 110 },
+        titleOffsetX: -50,
+        spacing: 15,
+        animate: false,
+    }
+    const data = [
+        {
+            "id": "temp.",
+            "ranges": [
+                96,
+                10,
+                104,
+                0,
+                120
+            ],
+            "measures": [
+                32
+            ],
+            "markers": [
+                113
+            ]
+        },
+        {
+            "id": "power",
+            "ranges": [
+                0.389616390278877,
+                0.3529904192182939,
+                1.363634672971878,
+                0,
+                2
+            ],
+            "measures": [
+                0.08997297601559893,
+                0.15675679465991488
+            ],
+            "markers": [
+                1.217072154408654
+            ]
+        },
+        {
+            "id": "volume",
+            "ranges": [
+                25,
+                8,
+                7,
+                0,
+                3,
+                36,
+                0,
+                40
+            ],
+            "measures": [
+                15
+            ],
+            "markers": [
+                37
+            ]
+        },
+        {
+            "id": "cost",
+            "ranges": [
+                5466,
+                93864,
+                260013,
+                0,
+                500000
+            ],
+            "measures": [
+                77927,
+                78955
+            ],
+            "markers": [
+                456368
+            ]
+        },
+        {
+            "id": "revenue",
+            "ranges": [
+                3,
+                2,
+                9,
+                0,
+                13
+            ],
+            "measures": [
+                8
+            ],
+            "markers": [
+                9.917280347210818,
+                8.12683789537778
+            ]
+        }
+    ]
+    const CustomRange = ({ x, y, width, height, color, data, onMouseEnter, onMouseMove, onMouseLeave }, visibleIndex) => {
+        const { showTooltipFromEvent, hideTooltip } = useTooltip()
+        //console.log(data)
+        const v0 = data.v0
+        const v1 = data.v1
+        return (
+            <rect
+                x={x}
+                y={y}
+                rx={5}
+                ry={5}
+                width={width}
+                height={height}
+                fill={color}
+                onMouseEnter={(event) =>
+                    showTooltipFromEvent(<BasicTooltip
+                        id={
+                            v1 ? (
+                                <span>
+                                    <strong>{v0}</strong> to <strong>{v1}</strong>
+                                </span>
+                            ) : (
+                                <strong>{v0}</strong>
+                            )
+                        }
+                        enableChip={true}
+                        color={color}
+                    />, event)
+                }
+                onMouseMove={(event) =>
+                    showTooltipFromEvent(<BasicTooltip
+                        id={
+                            v1 ? (
+                                <span>
+                                    <strong>{v0}</strong> to <strong>{v1}</strong>
+                                </span>
+                            ) : (
+                                <strong>{v0}</strong>
+                            )
+                        }
+                        enableChip={true}
+                        color={color}
+                    />, event)
+                }
+                onMouseLeave={() => hideTooltip()}
+            />
+        )
+    }
     return (
-        <rect
-            x={x}
-            y={y}
-            rx={5}
-            ry={5}
-            width={width}
-            height={height}
-            fill={color}
-            onMouseEnter={(event) =>
-                showTooltipFromEvent(<BasicTooltip
-                    id={
-                        v1 ? (
-                            <span>
-                                <strong>{v0}</strong> to <strong>{v1}</strong>
-                            </span>
-                        ) : (
-                            <strong>{v0}</strong>
-                        )
+        <div className="div-bullet-timechart">
+            <input type="number" onChange={(e) => setMaxValue(e.currentTarget.value)} defaultValue={MaxValue} />
+            <ResponsiveBullet
+                {...commonProps}
+                data={data}
+                theme={{
+                    fontSize: '14px',
+                    labels: {
+                        text: {
+                            fontSize: '16px',
+                            fontWeight: 'bold'
+                        }
                     }
-                    enableChip={true}
-                    color={color}
-                />, event)
-            }
-            onMouseMove={(event) =>
-                showTooltipFromEvent(<BasicTooltip
-                    id={
-                        v1 ? (
-                            <span>
-                                <strong>{v0}</strong> to <strong>{v1}</strong>
-                            </span>
-                        ) : (
-                            <strong>{v0}</strong>
-                        )
+                }}
+                rangeComponent={(props) => CustomRange(props, visibleIndex)}
+                maxValue={MaxValue}
+            />
+        </div>
+    )
+}
+
+const HeatmapChart = () => {
+    const keys = ["1", "2", "3"]
+    const data = [
+        {
+            "type": "start",
+            "1": 0,
+            "1Color": "rgb(255,255,255)",
+            "2": 1,
+            "2Color": "rgb(0,255,0)",
+            "3": 1,
+            "3Color": "rgb(0,0,255)",
+        }, {
+            "type": "stop",
+            "1": 1,
+            "1Color": "rgb(255,0,0)",
+            "2": 0,
+            "2Color": "rgb(255,255,255)",
+            "3": 0,
+            "3Color": "rgb(255,255,255)",
+        }, {
+            "type": "auto",
+            "1": 0,
+            "1Color": "rgb(255,255,255)",
+            "2": 0,
+            "2Color": "rgb(255,255,255)",
+            "3": 1,
+            "3Color": "rgb(0,0,255)",
+        },
+    ]
+    const colors = data
+        .map((item) =>
+            keys.map((key) => {
+                console.log(item[`${key}Color`])
+                return item[`${key}Color`]
+            })
+        )
+        .flat()
+
+    const customTooltip = ({ xKey, yKey, value, color }) => (
+        <strong style={{ color: 'black' }}>
+            {xKey} / {yKey}: {value}
+        </strong>
+    )
+
+    return (
+        <div className="div-heatmap-signalchart">
+            <ResponsiveHeatMap
+                width={900}
+                height={400}
+                data={data}
+                keys={keys}
+                indexBy="type"
+                margin={{ top: 60, right: 40, bottom: 40, left: 60 }}
+                theme={{
+                    fontSize: 14,
+                    axis: {
+                        legend: {
+                            text: {
+                                fontSize: 18,
+                                fontWeight: 'bold'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        container: {
+                            background: 'lightgray'
+                        }
                     }
-                    enableChip={true}
-                    color={color}
-                />, event)
-            }
-            onMouseLeave={() => hideTooltip()}
-        />
+                }}
+                forceSquare={true}
+                padding={5}
+                axisTop={{ orient: 'top', tickSize: 5, tickPadding: 5, tickRotation: 0, legend: 'leg', legendPosition: 'middle', legendOffset: -40 }}
+                axisRight={null}
+                axisBottom={null}
+                axisLeft={{
+                    orient: 'left',
+                    tickSize: 5,
+                    tickPadding: 5,
+                    legend: 'Type',
+                    legendPosition: 'middle',
+                    legendOffset: -60
+                }}
+                enableLabels={false}
+                cellOpacity={0.5}
+                animate={true}
+                motionConfig="slow"
+                motionDamping={5}
+                hoverTarget="rowColumn"
+                cellHoverOpacity={0.8}
+                cellHoverOthersOpacity={0.25}
+                colors={colors}
+                tooltip={(props) => customTooltip(props)}
+            />
+        </div>
     )
 }
 
@@ -296,11 +514,12 @@ class Maincontain extends React.Component {
         showSumTimechart: false,
         timechartData: [],
         timechartVisibleIndex: [],
+        showSumSignalchart: false,
     }
 
-    constructor() {
-        super()
-    }
+    // constructor() {
+    //     super()
+    // }
 
     componentDidMount() {
         console.log("did mount")
@@ -553,7 +772,7 @@ class Maincontain extends React.Component {
                     lastRefresh: new Date()
                 }, () => {
                     this.calculateCntPercentTarget()
-                    this.toggleShowHideSummary(true)
+                    this.toggleShowHide(true, 'summary')
                     spinners.forEach(spinner => {
                         spinner.style.setProperty('visibility', 'hidden')
                     })
@@ -582,7 +801,6 @@ class Maincontain extends React.Component {
                 //out break
                 console.log("out break")
                 timeType = "out break"
-                diffTime_s = diffTime_s
             } else if (start_time < st_break && end_time > st_break && end_time < en_break) {
                 //end in break
                 console.log("end in break")
@@ -633,24 +851,56 @@ class Maincontain extends React.Component {
         })
     }
 
-    toggleShowHideSummary = (flag) => {
-        let tabBtn = document.querySelector('.div-result-oa-btn')
-        let chart = document.querySelector('.div-result-main')
-        let chev = document.querySelector('.svg-rotate')
-        let h = document.querySelector('.div-result-main').scrollHeight
+    toggleShowHide = (flag, name) => {
+        var tabName = {
+            btn: '',
+            chart: '',
+            chev: '.svg-rotate',
+            key: '',
+            color: ''
+        }
+        if (name === "summary") {
+            tabName = {
+                btn: '.div-result-oa-btn',
+                chart: '.div-result-main',
+                chev: '.svg-rotate-data',
+                key: 'showSumData',
+                color: 'rgb(225, 255, 234)'
+            }
+        } else if (name === "timechart") {
+            tabName = {
+                btn: '.div-result-timechart-btn',
+                chart: '.div-result-timechart',
+                chev: '.svg-rotate-timechart',
+                key: 'showSumTimechart',
+                color: 'rgb(250, 255, 200)'
+            }
+        } else if (name === "signalchart") {
+            tabName = {
+                btn: '.div-result-signalchart-btn',
+                chart: '.div-result-signalchart',
+                chev: '.svg-rotate-signalchart',
+                key: 'showSumSignalchart',
+                color: 'rgb(240, 220, 255)'
+            }
+        }
+        let tabBtn = document.querySelector(tabName.btn)
+        let chart = document.querySelector(tabName.chart)
+        let chev = document.querySelector(tabName.chev)
+        let h = document.querySelector(tabName.chart).scrollHeight
         if (flag) {
-            tabBtn.style.setProperty('--tab-color', 'rgb(225, 255, 234)')
+            tabBtn.style.setProperty('--tab-color', tabName.color)
             chart.style.setProperty('visibility', 'visible')
             chart.style.setProperty('--max-height', h + 'px')
             chev.style.setProperty('--svg-rotate', 'rotate(0deg)')
         } else {
             tabBtn.style.setProperty('--tab-color', 'rgb(255, 255, 255)')
             chart.style.setProperty('visibility', 'hidden')
-            chart.style.setProperty('--max-height', '0')
+            chart.style.setProperty('--max-height', '1px')
             chev.style.setProperty('--svg-rotate', 'rotate(180deg)')
         }
         this.setState({
-            showSumData: flag,
+            [tabName.key]: flag,
         })
     }
 
@@ -708,7 +958,7 @@ class Maincontain extends React.Component {
             isAlert: true,
             txtAlert: txtAlert
         }, () => {
-            var alert = setTimeout(() => {
+            setTimeout(() => {
                 var newTxtAlert = this.state.txtAlert
                 var show = false
                 for (var i = 0; i < newTxtAlert.length; i++) {
@@ -730,35 +980,14 @@ class Maincontain extends React.Component {
         })
     }
 
-    toggleShowHideTimechart = (flag) => {
-        let tabBtn = document.querySelector('.div-result-timechart-btn')
-        let chart = document.querySelector('.div-result-timechart')
-        let chev = document.querySelector('.svg-rotate-timechart')
-        let h = document.querySelector('.div-result-timechart').scrollHeight
-        if (flag) {
-            tabBtn.style.setProperty('--tab-color', 'rgb(255, 230, 217)')
-            chart.style.setProperty('visibility', 'visible')
-            chart.style.setProperty('--max-height', h + 'px')
-            chev.style.setProperty('--svg-rotate', 'rotate(0deg)')
-        } else {
-            tabBtn.style.setProperty('--tab-color', 'rgb(255, 255, 255)')
-            chart.style.setProperty('visibility', 'hidden')
-            chart.style.setProperty('--max-height', '0')
-            chev.style.setProperty('--svg-rotate', 'rotate(180deg)')
-        }
-        this.setState({
-            showSumTimechart: flag,
-        })
-    }
-
     test = () => {
-        console.log(this.state.detailSQL)
+
     }
 
     render() {
         return (
             <div className="div-main-contain">
-                {/*<button onClick={() => this.test()}>test1</button>*/}
+                {<button onClick={() => this.test()}>test1</button>}
                 <h1>Initial Stage Visualize</h1>
                 {this.state.isAlert && <Alert variant={"danger"}>{this.state.txtAlert.join("\n")}</Alert>}
                 <Accordion defaultActiveKey="0" className="accordian-select-detail">
@@ -864,9 +1093,9 @@ class Maincontain extends React.Component {
                     </Accordion.Item>
                 </Accordion>
                 <div className="div-summary-data">
-                    <div className="div-result-oa-btn" onClick={() => this.toggleShowHideSummary(!this.state.showSumData)}>
+                    <div className="div-result-oa-btn" onClick={() => this.toggleShowHide(!this.state.showSumData, 'summary')}>
                         <p>Summary data</p>
-                        <FontAwesomeIcon icon={['fas', 'chevron-up']} className="svg-rotate" />
+                        <FontAwesomeIcon icon={['fas', 'chevron-up']} className="svg-rotate-data" />
                     </div>
                     <div className="div-result-main">
                         <div className="div-result-work">
@@ -939,99 +1168,7 @@ class Maincontain extends React.Component {
                         </div>
                         <div className="div-result-oa">
                             <div className="div-chart">
-                                <ResponsiveBar
-                                    {...commonProps}
-                                    data={this.state.chartData}
-                                    keys={this.state.chartKeys}
-                                    maxValue={100}
-                                    padding={0.2}
-                                    layout="vertical"
-                                    enableGridY={true}
-                                    enableGridX={false}
-                                    axisBottom={{
-                                        renderTick: customTick
-                                    }}
-                                    axisLeft={{
-                                        format: value =>
-                                            `${value}%`
-                                    }}
-                                    colors={(id, value) => {
-                                        var colorCode
-                                        const Id = id.id
-                                        if (Id === "MT")
-                                            colorCode = "#79D4FF"
-                                        else if (Id === "HT")
-                                            colorCode = "#FFE579"
-                                        else if (Id === "WT")
-                                            colorCode = "#79FFBC"
-                                        else if (Id === "NG cycle")
-                                            colorCode = "#FFBC79"
-                                        else if (Id === "Loss")
-                                            colorCode = "#FF799E"
-                                        else if (Id === "N/A")
-                                            colorCode = "#D679FF"
-                                        else if (Id === "OA")
-                                            colorCode = "#79D4FF"
-                                        else if (Id === "Loss time")
-                                            colorCode = "#FF799E"
-                                        else
-                                            colorCode = "red"
-                                        return colorCode
-                                    }}
-                                    borderWidth="3px"
-                                    borderColor={id => {
-                                        const Id = id.data.id
-                                        switch (Id) {
-                                            case "MT":
-                                            case "HT":
-                                            case "WT":
-                                            case "OA":
-                                                return "#4B6EBC"
-                                            default:
-                                                return "#BC4B4B"
-                                        }
-                                    }}
-                                    valueFormat={value =>
-                                        `${value}%`
-                                    }
-                                    tooltip={({ id, value, color }) => (
-                                        <div
-                                            style={{
-                                                padding: 12,
-                                                color,
-                                                background: '#222222',
-                                            }}
-                                        >
-                                            <strong>
-                                                {id} : {value}%
-                                            </strong>
-                                        </div>
-                                    )}
-                                    legends={[
-                                        {
-                                            dataFrom: 'keys',
-                                            anchor: 'bottom-right',
-                                            direction: 'column',
-                                            justify: false,
-                                            translateX: 120,
-                                            translateY: 0,
-                                            itemsSpacing: 2,
-                                            itemWidth: 100,
-                                            itemHeight: 20,
-                                            itemDirection: 'left-to-right',
-                                            itemOpacity: 0.85,
-                                            symbolSize: 20,
-                                            effects: [
-                                                {
-                                                    on: 'hover',
-                                                    style: {
-                                                        itemOpacity: 1
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]}
-                                />
+                                {BarChart(this.state.chartData, this.state.chartKeys)}
                             </div>
                             <div className="div-data">
                                 <Table className="table-sumdata">
@@ -1105,17 +1242,21 @@ class Maincontain extends React.Component {
                     </div>
                 </div>
                 <div className="div-summary-timechart">
-                    <div className="div-result-timechart-btn" onClick={() => this.toggleShowHideTimechart(!this.state.showSumTimechart)}>
+                    <div className="div-result-timechart-btn" onClick={() => this.toggleShowHide(!this.state.showSumTimechart, 'timechart')}>
                         <p>Timechart data</p>
                         <FontAwesomeIcon icon={['fas', 'chevron-up']} className="svg-rotate-timechart" />
                     </div>
                     <div className="div-result-timechart">
-                        <p>Bullet</p>
-                        <ResponsiveBullet
-                            {...commonPropsBullet}
-                            data={data}
-                            rangeComponent={(props) => CustomRange(props,this.state.timechartVisibleIndex)}
-                        />
+                        <BulletChart visibleIndex={this.state.timechartVisibleIndex} />
+                    </div>
+                </div>
+                <div className="div-summary-signalchart">
+                    <div className="div-result-signalchart-btn" onClick={() => this.toggleShowHide(!this.state.showSumSignalchart, 'signalchart')}>
+                        <p>Signal chart</p>
+                        <FontAwesomeIcon icon={['fas', 'chevron-up']} className="svg-rotate-signalchart" />
+                    </div>
+                    <div className="div-result-signalchart">
+                        {HeatmapChart()}
                     </div>
                 </div>
             </div >

@@ -1,7 +1,26 @@
 :root {
     --max-height: 1px;
     --svg-rotate: rotate(180deg);
-    --tab-color: rgb(255, 255, 255)
+    --tab-color: rgb(255, 255, 255);
+}
+
+::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    //background
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    background-color: white;
+}
+
+::-webkit-scrollbar-thumb {
+    //scroll
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+    background-color: rgb(126, 193, 255);
 }
 
 .accordian-select-detail {
@@ -128,14 +147,16 @@
 }
 
 .div-summary-data,
-.div-summary-timechart {
+.div-summary-timechart,
+.div-summary-signalchart {
     overflow: hidden;
     border: 1px solid rgb(220, 220, 220);
     border-radius: 5px;
     width: 80%;
     margin: 10px auto 10px auto;
     .div-result-oa-btn,
-    .div-result-timechart-btn {
+    .div-result-timechart-btn,
+    .div-result-signalchart-btn {
         position: relative;
         background-color: var(--tab-color);
         transition-duration: 0.35s;
@@ -159,19 +180,23 @@
         }
     }
     .div-result-oa-btn:hover,
-    .div-result-timechart-btn:hover {
+    .div-result-timechart-btn:hover,
+    .div-result-signalchart-btn:hover {
         cursor: pointer;
     }
 }
 
 .div-result-main {
+    width: 90%;
+    margin: 0 auto;
     visibility: hidden;
     max-height: var(--max-height);
     transition-duration: 0.35s;
     transition-timing-function: ease-in-out;
 }
 
-.div-result-timechart {
+.div-result-timechart,
+.div-result-signalchart {
     visibility: hidden;
     height: var(--max-height);
     max-height: var(--max-height);
@@ -279,6 +304,33 @@
     }
 }
 
-.div-result-timechart div div svg g {
-    
+.div-result-timechart div div svg > g > g > g:nth-child(3) {
+    visibility: hidden;
+}
+
+.div-result-timechart div div svg > g > g:last-child g:nth-child(3) {
+    visibility: visible;
+}
+
+.div-bullet-timechart {
+    width: 90%;
+    margin: 0 auto;
+    height: max-content;
+    overflow: auto;
+    div {
+        min-height: 1px;
+        width: max-content;
+    }
+    scrollbar-width: thin;
+    scrollbar-color: #6969dd #e0e0e0;
+}
+
+.div-heatmap-signalchart {
+    width: 90%;
+    margin: 0 auto;
+    height: max-content;
+    overflow: auto;
+    div {
+        min-height: 1px;
+    }
 }
